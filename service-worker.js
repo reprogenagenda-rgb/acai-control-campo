@@ -1,9 +1,41 @@
-const CACHE='acai-campo-v1-4';
-const ASSETS=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{
-  const url=new URL(e.request.url);
-  if(url.hostname.includes('script.google.com')||url.hostname.includes('googleusercontent.com')){return;}
-  e.respondWith(fetch(e.request).then(r=>{const copy=r.clone(); if(e.request.method==='GET') caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{}); return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))));
+/* Açaí Control Campo — Service Worker V1.5
+   Quebra de cache: 2026-06-02
+*/
+const CACHE_NAME = 'acai-control-campo-v1-5-20260602';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
+];
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(APP_SHELL).catch(() => Promise.resolve());
+    })
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    )).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  event.respondWith(
+    fetch(req).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
+      return res;
+    }).catch(() => caches.match(req).then(cached => cached || caches.match('./index.html')))
+  );
 });
